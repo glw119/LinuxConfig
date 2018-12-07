@@ -1,0 +1,168 @@
+<html>
+<head>
+    <title>How to clone an Arch Linux installation</title>
+
+    <style type="text/css">
+    body { font-family:Times; color:#000000; background-color:#FFFFFF; }
+    a:link { color:#B00000; text-decoration:none; }
+    a:visited { color:#800000; text-decoration:none; }
+    a:hover { color:#E00000; text-decoration:none; }
+    </style>
+
+    <meta name="DC.Creator" content="Volker Schatz">
+    <meta name="DC.Language" content="en">
+    <meta name="DC.Type" content="Text">
+    <meta name="DC.Rights" content="All rights reserved by Volker Schatz">
+    <meta name="keywords" content="arch linux, clone, installation">
+</head>
+
+<body bgcolor="#FFFFFF" text="#000000" link="#B00000" alink="#E00000" vlink="#800000">
+
+
+<table width="100%"><tr>
+<td>&nbsp;</td>
+<td align="center"><a href="../">&uarr;&uarr; Home</a></td>
+<td align="center"><a href="root.html">&uarr; Root</a></td>
+<td>&nbsp;</td>
+</tr></table>
+
+<hr>
+
+
+<h1>How to clone an Arch Linux installation</h1>
+
+<p>
+This also works to install Arch on a disk that is to become the system disk of
+another computer.  This is briefly described
+<a href="https://wiki.archlinux.org/index.php/Install_from_Existing_Linux">here</a><img src="/ico/el.png">, but
+there are some additional caveats as well as shortcuts if you already have a
+comparable system.  To make best use of this, you need an internal or external
+enclosure in which you can attach a bare hard disk to your computer (otherwise,
+you would have to temporarily build the new system disk into your existing
+computer).  This is how I have repeatedly created new Arch Linux installations
+both at work and at home.
+</p>
+<p>
+To avoid confusion farther on, let me give names to the three systems involved:
+</p>
+<ul>
+<li> The target system is the installation we are creating</li>
+<li> The host system is the one to which the new system disk is attached</li>
+<li> The template system is the existing system that is to be cloned
+</li>
+</ul>
+<p>
+The three systems need not all be different -- for example, the template system
+could be the same as the host system.  The template system may not exist at
+all, if you want to create a new installation rather than clone one.  The host
+system has to be able to run software on the target system, but otherwise need
+not be the same CPU architecture -- for example, it may be an x86_64 system
+when you want to create an i686 system.
+</p>
+<p>
+I will assume you have already partitioned the target disk and created a file
+system on the system partition.  Then you proceed as follows.
+</p>
+<ul>
+<li> If you have a template system, copy the packages
+  <tt>/var/cache/pacman/pkg/*</tt> and the databases <tt>/var/lib/pacman/sync/*</tt> from
+  it to the target disk (after creating the directories).</li>
+<li> Extract (with <tt>tar</tt>) the following packages to the root of the target
+  system in the given order, to get a minimal system to work with:
+  <pre>
+filesystem
+bash gawk grep file glibc ncurses readline sed
+acl archlinux-keyring attr bzip2 coreutils curl e2fsprogs expat gcc-libs gnupg gpgme keyutils krb5 libarchive libassuan libgpg-error libgcrypt libidn libssh2 lz4 lzo openssl pacman xz zlib
+pacman-mirrorlist tar libcap arch-install-scripts util-linux systemd
+  </pre>
+  This list of packages is copied from the shell script
+  <a href="https://github.com/tokland/arch-bootstrap/blob/master/arch-bootstrap.sh"><tt>arch-bootstrap.sh</tt></a><img src="/ico/el.png"> linked from the
+  <a href="https://wiki.archlinux.org/index.php/Install_from_Existing_Linux">Wiki
+  page</a><img src="/ico/el.png">, look there for an up-to-date list.</li>
+<li> If you do not have a template system, you can run the script
+  <tt>arch-bootstrap.sh</tt> which downloads the packages above.  You have to
+  customise it before running it: Choose your Arch mirror, target root
+  directory and system architecture.  The script also tries to perform some of
+  the following steps, but in my experience this never works 100% and has to be
+  postprocessed manually.</li>
+<li> Select a mirror in <tt>/etc/pacman.d/mirrorlist</tt> on the target installation
+  and set the architecture explicitly in <tt>/etc/pacman.conf</tt> if it is not the
+  same as the host.  Pacman refuses to even install packages from the cache
+  when no mirror is selected.</li>
+<li> Install the
+  <a href="https://www.archlinux.org/packages/extra/any/arch-install-scripts/"><tt>arch-install-scripts</tt></a><img src="/ico/el.png">
+  package on the host.  This contains the <tt>arch-chroot</tt> script which creates
+  bind mounts for <tt>/proc</tt> and <tt>/dev</tt> and others before chroot'ing, which
+  saves a lot of hassle.  If you host runs a different Linux, you could try
+  downloading the scripts from
+  <a href="https://projects.archlinux.org/arch-install-scripts.git">here</a><img src="/ico/el.png">, but you may
+  have to make modifications to <tt>arch-chroot</tt> if it is not completely
+  compatible.
+  <a href="https://wiki.archlinux.org/index.php/Install_from_Existing_Linux#Creating_the_chroot">This
+  section</a><img src="/ico/el.png"> describes how to do the necessary bind mounts manually.  (One should
+  mention that <tt>--rbind</tt> mounts are next to impossible to unmount again
+  &mdash; try something like <tt>grep &lt;mountpoint&gt;  /proc/mounts | awk '{ print
+  $2; }' | sort -ru | while read m ; umount -n $m ; done</tt> or be prepared to
+  reboot.)</li>
+<li> <tt>arch-chroot</tt> into the target system (as root).</li>
+<li> Initialise pacman's keyring: <pre>
+pacman-key --init 
+pacman-key --populate archlinux
+</pre></li>
+<li> Run <tt>pacman -S --force ...</tt> to reinstall the packages we unpacked
+  manually above, except for <tt>pacman</tt> and <tt>arch-install-scripts</tt>.</li>
+<li> Again select your mirror in <tt>/etc/pacman.d/mirrorlist</tt> as this was
+  overwritten by reinstalling <tt>pacman-mirrorlist</tt>.</li>
+<li> Reinstall the remaining two packages <tt>pacman -S --force pacman
+  arch-install-scripts</tt>.</li>
+<li> Set the architecture in <tt>/etc/pacman.conf</tt> again if not the same as the
+  host.</li>
+<li> Make a list of the packages installed on the template system: <pre>
+pacman -Qneq | sort &gt; /root/tmp/explicit-packages
+pacman -Qndq | sort &gt; /root/tmp/depend-packages
+</pre>
+  The list of dependency packages may not be strictly necessary.  It helps
+  recreate exactly the same system in case you came to rely on a dependency
+  package that is not needed by an explicitly installed package any more and
+  would therefore not be installed automatically.  The sorting is also not
+  necessary, but allows to compare lists with <tt>diff</tt> between different
+  systems or times.</li>
+<li> Install these packages on the target system after transferring the lists to
+  somewhere on the target system: <pre>
+cat /root/tmp/explicit-packages | pacman -S --needed -
+cat /root/tmp/depend-packages | pacman -S --needed --asdeps -
+</pre>
+  The <tt>--needed</tt> prevents reinstallation of packages we installed already.
+  As noted above, installing the dependency packages may be redundant.  (The
+  pacman commands above are from the commendable Wiki page
+  <a href="https://wiki.archlinux.org/index.php/Pacman_Tips">&quot;pacman tips&quot;</a><img src="/ico/el.png">.)</li>
+<li> Copy configuration files from the template system and/or configure
+  <tt>/etc/fstab</tt>, <tt>/etc/hostname</tt>, <tt>/etc/localtime</tt>, <tt>/etc/locale.gen</tt>,
+  <tt>/etc/locale.conf</tt>, <tt>/etc/vconsole.conf</tt> manually as described
+  <a href="https://wiki.archlinux.org/index.php/Installation_guide">here</a><img src="/ico/el.png">.</li>
+<li> Install the bootloader, for example by running <tt>syslinux-install_update -i
+  -a -m</tt> for syslinux (still from the chroot) as described
+  <a href="https://wiki.archlinux.org/index.php/Syslinux">on its Wiki page</a><img src="/ico/el.png">.</li>
+<li> Run <tt>mkinitcpio -p linux</tt> from the chroot.</li>
+<li> ... (More configuration and installation that may be more comfortable from
+  the host system.)</li>
+<li> Attach the target system disk to the target hardware.</li>
+<li> When booting the new box for the first time, boot into &quot;Arch Linux
+  Fallback&quot;.  <tt>mkinitcpio</tt> minimises the normal &quot;Arch Linux&quot; boot to contain
+  only drivers needed for the system on which it is run, i.e. the host system
+  in our case.</li>
+<li> Rerun <tt>mkinitcpio -p linux</tt> on the target system to get a working and
+  fast-booting normal boot option.</li>
+<li> ... (More configuration and installation on the target system)
+</li>
+</ul>
+
+<hr>
+
+
+
+
+<p><small><a href="/legal.html">TOS / Impressum</a></small></p>
+</body>
+
+</html>
