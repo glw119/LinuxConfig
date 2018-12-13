@@ -65,6 +65,10 @@ DISABLE_AUTO_UPDATE="true"
 plugins=(
   git
   archlinux
+  autojump
+  gradle
+  mvn
+  sudo
 )
 
 
@@ -106,8 +110,11 @@ source $ZSH/oh-my-zsh.sh
 
 DEFAULT_USER="liangwu"
 
-NPM_PACKAGES="${HOME}/.npm-packages"
-PATH="$NPM_PACKAGES/bin:$PATH"
+# alias 7zaa="7z a -t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on -mhe=on -p"
+export NPM_PACKAGES="${HOME}/.npm-packages"
+export PATH="$NPM_PACKAGES/bin:$PATH"
 
 unset MANPATH
 export MANPATH="$NPM_PACKAGES/share/man:$(manpath)"
+
+export PATH=$HOME/.local/bin:$PATH

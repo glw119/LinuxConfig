@@ -1,0 +1,10 @@
+            "Binds": [
+                "/home/liangwu/docker/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro",
+                "/opt/tomcat/app-logs:/var/log/tomcat:ro",
+                "/opt/tomcat_01/app-logs:/var/log/tomcat_01:ro",
+                "/opt/tomcat_02/app-logs:/var/log/tomcat_02:ro",
+                "/opt/tomcat_03/app-logs:/var/log/tomcat_03:ro",
+                "/opt/tomcat_04/app-logs:/var/log/tomcat_04:ro",
+                "/opt/tomcat_05/app-logs:/var/log/tomcat_05:ro"
+            ],
+

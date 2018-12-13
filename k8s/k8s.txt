@@ -1,0 +1,95 @@
+If everyone else is running a cluster with kubeadm on virtual machine i think this lectures is a must have because i have spend same days to solve this error:
+error: unable to upgrade connection: pod does not exist
+or this
+kubectl logs
+Error from server (NotFound): the server could not find the requested resource
+and i haven't find samethink about it on the kubernetes guide or on the kubeadm issue traker.
+If you are running same virtualmachine you had to do on the Master add this at the kubeadm init:
+--apiserver-advertise-address=<ip-address>
+and on the other nodes in the config file: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+you had to add this other ambient variables:
+Environment="KUBELET_EXTRA_ARGS=--node-ip=<worker IP address>"
+/etc/sysconfig/kubelet
+so restart the kubelet services and that had permit ot me to connect to pod schedule on other nodes that are virtual machine and are not exposed to the internet but are linked to the real machine where they are running.
+This is a little tips from my experience working with kubernetes
+
+
+sudo kubeadm init --kubernetes-version=v1.12.1 --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.33.10
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml
+
+ip_vs
+ip_vs_rr
+ip_vs_wrr
+ip_vs_sh
+nf_conntrack_ipv4
+
+#!/bin/bash
+
+images=(
+kube-apiserver:v1.12.1
+kube-controller-manager:v1.12.1
+kube-scheduler:v1.12.1
+kube-proxy:v1.12.1
+pause:3.1
+etcd:3.2.24
+)
+docker pull 10.17.65.22:8088/coredns:1.2.2
+docker tag 10.17.65.22:8088/coredns:1.2.2 k8s.gcr.io/coredns:1.2.2
+
+for imageName in ${images[@]} ; do
+  docker pull 10.17.65.22:8088/$imageName
+  docker tag 10.17.65.22:8088/$imageName k8s.gcr.io/$imageName
+  docker rmi 10.17.65.22:8088/$imageName
+done
+
+
+ kubeadm join 192.168.33.10:6443 --token klqzw3.t260e8ygibq16j8c --discovery-token-ca-cert-hash sha256:827e7dff300beabdfba9527f51ccd7bfd701daf2218bd1e3585668a50f298c1d
+
+
+------kubernetes pull image from insecure private registry
+Manual Permanent Fix:
+This fix has the added benefit of supporting auto scaling?
+
+kubectl create secret docker-registry my-reg --docker-server=registry.gitlab.com --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email> --namespace=<your-namespace>
+https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-that-holds-your-authorization-token
+Set ImagePullSecrets on your service account kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "my-reg"}]}' --namespace=<your-namespace>
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account
+remove imagePullSecrets from the deployment chart... the service account secret won't override the one on the chart. Auto DevOps will add the gitlab-registry secret, but it wont make the chart use it if you've manually removed the imagePullSecrets field from the chart :D
+
+
+kubectl create secret -n $KUBE_NAMESPACE docker-registry gitlab-registry \
+  --docker-server="$CI_REGISTRY" \
+  --docker-username="$CI_REGISTRY_USER" \
+  --docker-password="$CI_REGISTRY_PASSWORD" \
+  --docker-email="$GITLAB_USER_EMAIL" \
+  -o yaml --dry-run | kubectl replace -n $KUBE_NAMESPACE --force -f -
+  
+  
+  
+  
+--------coredns
+https://github.com/coredns/deployment/tree/master/kubernetes
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+          pods insecure
+          upstream . /etc/resolv.conf
+          fallthrough in-addr.arpa ip6.arpa
+        }
+        prometheus :9153
+        proxy . 114.114.114.114
+        cache 30
+        loop
+        reload
+        loadbalance
+    }

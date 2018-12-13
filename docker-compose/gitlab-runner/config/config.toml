@@ -1,0 +1,17 @@
+concurrent = 4
+check_interval = 0
+
+[[runners]]
+  name = "122-runner"
+  url = "http://gitlab/gitlab/"
+  token = "token"
+  environment = ["DOCKER_AUTH_CONFIG={ \"auths\": { \"docker-registry\": { \"auth\": \"authtoken\" } } }"]
+  executor = "docker"
+  [runners.docker]
+    tls_verify = false
+    image = "alpine:latest"
+    privileged = false
+    disable_cache = false
+    volumes = ["/cache", "/root/.m2"]
+    shm_size = 0
+    pull_size = "if-not-present"

@@ -1,0 +1,18 @@
+filebeat.prospectors:
+- type: log
+  enable: true
+  encoding: utf-8
+  paths:
+    - /var/log/tomcat*/*.log
+  multiline.pattern: '^\[\d{4}-\d{2}-\d{2}\s+ \d{2}:\d{2}:\d{2}:\d{3}\]'
+  multiline.negate: true
+  multiline.match: after
+output.elasticsearch:
+  hosts: ["10.17.65.122:9200"]
+  index: "22-server-%{+yyyy.MM.dd}"
+setup.template:
+  name: '22-server'
+  pattern: '22-server-*'
+  enabled: false
+#output.logstash:
+#  hosts: ["10.17.65.122:5044"]

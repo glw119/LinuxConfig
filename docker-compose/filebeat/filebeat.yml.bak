@@ -1,0 +1,19 @@
+filebeat.prospectors:
+- type: log
+  enable: true
+  encoding: utf-8
+  document_type: catalina-wine-mixer
+  paths:
+    - /var/log/tomcat*/*.log
+  multiline.pattern: '^([0-9]{4}-[0-9]{2}-[0-9]{2})|([J|F|M|A|M|S|O|N|D][a-z]{2} [0-9]{1,2}, [0-9]{2})'
+  multiline.negate: true
+  multiline.match: after
+output.elasticsearch:
+  hosts: ["10.17.65.122:9200"]
+  index: "22-server-%{+yyyy.MM.dd}"
+setup.template:
+  name: '22-server'
+  pattern: '22-server-*'
+  enabled: false
+#output.logstash:
+#  hosts: ["10.17.65.122:5044"]

@@ -1,0 +1,13 @@
+version: "3"
+services:
+    jenkins:
+        image: jenkins/jenkins:lts
+        restart: always
+        volumes:
+            - ./jenkins_home:/var/jenkins_home
+            - /usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro
+        environment:
+            - TZ=Asia/Shanghai
+            - JAVA_OPTS=-Duser.timezone=Asia/Shanghai
+        ports:
+            - "58081:8080"

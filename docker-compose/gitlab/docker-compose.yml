@@ -1,0 +1,22 @@
+version: "3"
+services:
+  gitlab:
+    image: 'gitlab/gitlab-ce:11.5.0-ce.0'
+    restart: always
+    ports:
+      - '18080:5622'
+      - '12222:22'
+    volumes:
+      - './data/config:/etc/gitlab'
+      - './data/logs:/var/log/gitlab'
+      - './data/data:/var/opt/gitlab'
+      - './data/sshd_config:/etc/ssh/sshd_config:ro'
+      - './data/passwd:/etc/passwd:ro'
+      - './data/group:/etc/group:ro'
+      - '/usr/share/zoneinfo/Asia/Shanghai:/etc/localtime:ro'
+      - './data/authorized_keys_proxy:/gitlab-data/ssh/authorized_keys:ro'
+    ulimits:
+      sigpending: 62793
+      nproc: 131072
+      nofile: 60000
+      core: 0

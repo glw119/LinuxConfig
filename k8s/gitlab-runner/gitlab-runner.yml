@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitlab
+---
+apiVersion: v1
+data:
+  .dockerconfigjson: ...
+kind: Secret
+metadata:
+  name: regcred
+  namespace: gitlab
+type: kubernetes.io/dockerconfigjson
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-runner
+  namespace: gitlab
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec", "secrets"]
+  verbs: ["get", "list", "watch", "create", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gitlab-runner
+  namespace: gitlab
+subjects:
+  - kind: ServiceAccount
+    name: gitlab-runner
+    namespace: gitlab
+roleRef:
+  kind: Role
+  name: gitlab-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitlab-runner
+  namespace: gitlab
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitlab-runner
+  namespace: gitlab
+data:
+  config.toml: |
+    concurrent = 4
+    [[runners]]
+      name = "k8s-Runner"
+      url = "http://gitlab/gitlab/"
+      token = "token"
+      environment = ["DOCKER_AUTH_CONFIG={ \"auths\": { \"docker-registry\": { \"auth\": \"auth_token=\" } } }"]
+      executor = "kubernetes"
+      [runners.kubernetes]
+        namespace = "gitlab"
+        image = "docker-registry/maven:3-jdk-8-alpine"
+        image_pull_secrets = ["regcred"]
+        [[runners.kubernetes.volumes.host_path]]
+          name = "m2"
+          mount_path = "/root/.m2"
+          host_path = "/m2"
+        [[runners.kubernetes.volumes.host_path]]
+          name = "cache"
+          mount_path = "/cache"
+          host_path = "/cache"
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: gitlab-runner
+  namespace: gitlab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: gitlab-runner
+  template:
+    metadata:
+      labels:
+        name: gitlab-runner
+    spec:
+      serviceAccount: gitlab-runner
+      containers:
+      - args:
+        - run
+        image: gitlab/gitlab-runner:latest
+        imagePullPolicy: IfNotPresent
+        name: gitlab-runner
+        volumeMounts:
+        - mountPath: /etc/gitlab-runner
+          name: config
+        - mountPath: /etc/ssl/certs
+          name: cacerts
+          readOnly: true
+      restartPolicy: Always
+      volumes:
+      - configMap:
+          name: gitlab-runner
+        name: config
+      - hostPath:
+          path: /etc/ssl/certs
+        name: cacerts
